@@ -1,0 +1,212 @@
+<html>
+	<head></head>
+	<body>
+		<button data-switch="off" onclick="toggleSim(this)">Start</button>
+		<canvas id="canvas"></canvas>
+		
+		<script>
+			// Constants.
+			var NUM_OF_BOXES = 100;
+			var NUM_OF_MOVERS = 13;
+			
+			var ROWS = 5;
+			var COLS = 15;
+			
+			var canvas = document.getElementById("canvas");
+			var ctx = canvas.getContext("2d");
+			var W = window.innerWidth;
+			var H = window.innerHeight;
+			canvas.width = W;
+			canvas.height = H;
+			
+			/** Slot **/
+			var Slot = function() {
+				this.size = 25;
+				this.x = 0;
+				this.y = 0;
+				this.reserve = null;
+			}
+			
+			Slot.prototype.draw = function() {								
+					ctx.rect(this.x, this.y, this.size, this.size);
+					ctx.stroke();
+			}
+			/** Slot END **/
+			
+			/** Box **/
+			var Box = function(){				
+				this.size = 25;
+				this.x = 0;
+				this.y = 0;			
+				this.status = -1;
+			}
+									
+			Box.prototype.draw = function() {
+					ctx.fillStyle = "#000000";					
+					ctx.fillRect(this.x, this.y, this.size, this.size);
+			}
+			/** Box END **/
+			
+			/** Mover **/
+			var Mover = function() {
+				this.id = 0;
+				this.x = 0;
+				this.y = 0;
+				this.target = null;
+				this.grab = false;
+			}
+			
+			Mover.prototype.SIZE = 10;
+			Mover.prototype.draw = function() {
+				ctx.fillStyle = "#ff0000";
+				ctx.beginPath();
+				ctx.arc(this.x, this.y, this.SIZE, 0, 2 * Math.PI);
+				ctx.fill();
+			}			
+			Mover.prototype.update = function() {
+				console.log(this);
+				
+				// find a new target.
+				if(this.target == null) {
+									
+					for(var i = 0; i < NUM_OF_BOXES; ++i) {
+						if(boxes[i].status == -1) {
+							this.target = i;
+							boxes[i].status = 0;
+							return;
+						}
+					}
+				}
+				else if(this.grab == false){		
+									
+					var i = this.target;
+					var dx = boxes[i].x - this.x;
+					var dy = boxes[i].y - this.y;
+					
+					if(Math.abs(dx) < this.SIZE) dx = 0;					
+					if(Math.abs(dy) < this.SIZE) dy = 0;	
+									
+					if(dx == 0 && dy == 0) {
+						this.grab = true;
+						boxes[i].status = 0;
+						return;
+					}
+														
+					var distance = Math.sqrt(dx*dx + dy*dy);
+					
+					this.x += dx / (distance / this.SIZE);													
+					this.y += dy / (distance / this.SIZE);										
+				}
+				else {
+					var i = this.target;
+					var dx = slots[i].x - this.x;
+					var dy = slots[i].y - this.y;
+					if(Math.abs(dx) < this.SIZE) dx = 0;					
+					if(Math.abs(dy) < this.SIZE) dy = 0;	
+					
+					
+												
+					if(dx == 0 && dy == 0) {
+						this.grab = false;
+						this.target = null;
+						boxes[i].status = 1;
+						boxes[i].x = slots[i].x;
+						boxes[i].y = slots[i].y;
+						return;
+					}
+
+					var distance = Math.sqrt(dx*dx + dy*dy);
+					
+					this.x += dx / (distance / this.SIZE);
+					boxes[i].x = this.x;
+				
+					this.y += dy / (distance / this.SIZE);
+					boxes[i].y = this.y;																				
+				}				
+			}					
+			/** Mover End **/
+			
+			var boxes = [];		
+			var slots = [];
+			var movers = [];					
+				
+			function initBoxes(){
+				var x = W / 2;
+				var y = H / 2;				
+				var xs = 10;
+				var ys = 10;
+				var margin = 5;
+				for(var i = 0; i < NUM_OF_BOXES; ++i) {					
+					var temp = new Box();
+					temp.x = x;
+					temp.y = y;	
+					var slot = new Slot();
+					slot.x = xs;
+					slot.y = ys;
+					
+					boxes.push(temp);	
+					slots.push(slot);
+					
+					x += temp.size + margin;
+					xs += slot.size + margin;
+					
+					if((i + 1) % COLS == 0) {
+						y += temp.size + margin;
+						ys += slot.size + margin;
+						
+						x = window.innerWidth / 2;
+						xs = 10;
+					}
+				}
+			}
+				
+			function initMovers() {
+				for(var i = 0; i < NUM_OF_MOVERS; ++i) {
+					var mover = new Mover();
+					mover.id = i;
+					mover.x = 100
+					mover.y = H;
+					movers.push(mover);
+				}
+			}
+				
+			function gameLoop() {
+						
+				// clear
+				ctx.clearRect(0, 0, W, H);
+						
+				// draw boxes
+				for(var i = 0; i < NUM_OF_BOXES; ++i) {
+					boxes[i].draw();					
+					slots[i].draw();
+				}
+					
+				// draw mover
+				for(var i = 0; i < NUM_OF_MOVERS; ++i) {
+					movers[i].draw();
+					movers[i].update();
+				}
+
+			}
+			
+			// main
+			initBoxes();
+			initMovers();
+			var intervalId;
+			function toggleSim(e){
+				if(e.getAttribute("data-switch") == "on") {
+					clearInterval(intervalId);
+					e.setAttribute("data-switch", "off");
+					e.innerText = "Stop";
+				}
+				else {
+					intervalId = setInterval(gameLoop, 30);
+					e.setAttribute("data-switch", "on");
+					e.innerText = "Start";
+				}
+			}
+			
+			
+		</script>
+	</body>
+</html>
